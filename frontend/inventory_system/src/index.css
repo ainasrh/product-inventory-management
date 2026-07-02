@@ -1,0 +1,11 @@
+/* Tailwind CSS is loaded via CDN in index.html */
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
