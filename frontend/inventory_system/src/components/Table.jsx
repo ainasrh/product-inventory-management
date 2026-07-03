@@ -5,6 +5,9 @@ import { useState } from 'react';
  * New optional props:
  *   sortable    — if true, clicking a column header sorts client-side (skipped for columns with `render` + no explicit `sortKey`, unless sortKey given)
  *   getRowKey   — (row) => key, defaults to row.id
+ *
+ * Column config also supports:
+ *   align — 'left' | 'center' | 'right' (defaults to 'left')
  */
 export function Table({ columns, rows, sortable = false, getRowKey = (r) => r.id }) {
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
@@ -30,6 +33,9 @@ export function Table({ columns, rows, sortable = false, getRowKey = (r) => r.id
     });
   }
 
+  const alignClass = (align) =>
+    align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
+
   return (
     <div className=" rounded-xl overflow-hidden bg-surface shadow-card">
       <div className="overflow-x-auto scrollbar-thin">
@@ -44,11 +50,11 @@ export function Table({ columns, rows, sortable = false, getRowKey = (r) => r.id
                     key={col.key}
                     scope="col"
                     onClick={() => handleSort(col)}
-                    className={`text-left px-4 py-3 font-semibold text-text-muted text-xs uppercase tracking-wide border-b border-border whitespace-nowrap ${
+                    className={`px-4 py-3 font-semibold text-text-muted text-xs uppercase tracking-wide border-b border-border whitespace-nowrap ${alignClass(col.align)} ${
                       sortable && !col.sortDisabled ? 'cursor-pointer select-none hover:text-text' : ''
                     }`}
                   >
-                    <span className="inline-flex items-center gap-1">
+                    <span className={`inline-flex items-center gap-1 ${col.align === 'center' ? 'justify-center' : ''}`}>
                       {col.label}
                       {sortable && !col.sortDisabled && (
                         isSorted ? (
@@ -72,7 +78,7 @@ export function Table({ columns, rows, sortable = false, getRowKey = (r) => r.id
                 }`}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3 text-text align-middle whitespace-nowrap">
+                  <td key={col.key} className={`px-4 py-3 text-text align-middle whitespace-nowrap ${alignClass(col.align)}`}>
                     {col.render ? col.render(row[col.key], row) : row[col.key] ?? '—'}
                   </td>
                 ))}

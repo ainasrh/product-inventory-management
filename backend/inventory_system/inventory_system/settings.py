@@ -199,48 +199,45 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False   ,
+    'disable_existing_loggers': False,
+
     'formatters': {
         'verbose': {
-            'format': '{asctime} {levelname} {name} {module}:{lineno} — {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
+            'format': (
+                '{asctime} {levelname} {name} '
+                '{module}:{lineno} — {message}'
+            ),
             'style': '{',
         },
     },
+
     'handlers': {
-        'file': {
+        'console': {
             'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': str(LOG_DIR / 'api.log'),
-            'maxBytes': 5 * 1024 * 1024,   # 5 MB
-            'backupCount': 5,
+            'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
     },
+
     'loggers': {
         'app': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
+
         'authentication': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
+
         'django': {
-            'handlers': ['file', 'console'],
+            'handlers': ['console'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
+
         'django.server': {
             'handlers': ['console'],
             'level': 'INFO',

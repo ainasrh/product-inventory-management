@@ -54,8 +54,9 @@ function AdminProtectedLayout() {
     </div>
   );
 }
-// ── Access Denied Message ─────────────────────────────────────────────
+
 import { Link } from 'react-router-dom';
+import { ProductDetailPage } from './pages/ProductDetailPage';
 
 // ── Access Denied Message ─────────────────────────────────────────────
 function AccessDenied() {
@@ -103,14 +104,10 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* 
-          Protected Routes Group 
-          Everything inside this <Route> goes through ProtectedLayout
-        */}
+       
         <Route element={<ProtectedLayout />}>
           <Route path="/products" element={<ProductListPage />} />
-          
-          
+          <Route path="/products/:id" element={<ProductDetailPage />} />
         </Route>
           
           <Route element={<AdminProtectedLayout />}>

@@ -37,15 +37,13 @@ export function LoginPage() {
 
   setSubmitting(true);
 
-  try {
+    try {
     const { access, refresh } = await loginApi(
       form.username,
       form.password
     );
 
-    login(access, refresh, {
-      username: form.username,
-    });
+    await login(access, refresh); // no third argument — let context fetch the real user
 
     toast.success('Logged in successfully');
     navigate('/products');
