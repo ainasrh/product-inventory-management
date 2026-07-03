@@ -1,23 +1,50 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { getAccessToken, storeTokens, clearTokens } from '../services/authService';
+import api from '../api';
+
 
 export const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [token, setToken]   = useState(null);
-  const [user, setUser]     = useState(null);
+  const [token, setToken]     = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const saved = getAccessToken();
-    if (saved) setToken(saved);
-    setLoading(false);
+    if (saved) {
+      setToken(saved);
+      fetchUser(saved);
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const login = (access, refresh, userData = null) => {
+  const fetchUser = async (accessToken) => {
+    try {
+      const res = await api.get('/auth/me/', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setUser(res.data);
+    } catch (err) {
+      // token invalid/expired — clear everything
+      clearTokens();
+      setToken(null);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const login = async (access, refresh, userData = null) => {
     storeTokens(access, refresh);
     setToken(access);
-    setUser(userData);
+
+    if (userData) {
+      setUser(userData);
+    } else {
+      await fetchUser(access);
+    }
   };
 
   const logout = () => {

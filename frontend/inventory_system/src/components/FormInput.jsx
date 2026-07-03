@@ -1,25 +1,47 @@
 /**
- * Reusable labelled input with inline error.
- * Used across every form in the app.
+ * Same API as before: label, name, value, onChange, error, required, type, placeholder.
+ * Extra optional: hint (helper text shown when there's no error).
  */
 export function FormInput({
-  label, name, type = 'text', value, onChange,
-  error, placeholder, required = false, disabled = false,
+  label,
+  name,
+  value,
+  onChange,
+  error,
+  hint,
+  required = false,
+  type = 'text',
+  placeholder,
+  className = '',
+  ...rest
 }) {
   return (
-    <div className="mb-4">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
-        {label}{required && <span className="text-red-500 ml-1">*</span>}
+    <div className={`mb-4 ${className}`}>
+      <label htmlFor={name} className="block text-sm font-medium  mb-1.5">
+        {label}
+        {required && <span className="text-danger ml-0.5">*</span>}
       </label>
       <input
-        id={name} name={name} type={type}
-        value={value} onChange={onChange}
-        placeholder={placeholder} disabled={disabled}
-        className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500
-          ${error   ? 'border-red-500 bg-red-50'   : 'border-gray-300'}
-          ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${name}-error` : hint ? `${name}-hint` : undefined}
+        className={`w-full px-3.5 py-2.5 bg-card text-whote placeholder:text-text-muted rounded-xl text-sm
+          border ${error ? 'border-red-500' : 'border-border'}
+          transition-all duration-200
+          focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent
+          ${error ? 'focus:ring-red-500 focus:border-red-500' : ''}`}
+        {...rest}
       />
-      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+      {error ? (
+        <p id={`${name}-error`} className="text-red-500 text-xs mt-1.5">{error}</p>
+      ) : hint ? (
+        <p id={`${name}-hint`} className="text-text-muted text-xs mt-1.5">{hint}</p>
+      ) : null}
     </div>
   );
 }

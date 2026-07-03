@@ -111,14 +111,29 @@ class VariantInputSerializer(serializers.Serializer):
     )
 
 
+import json
+from django.http import QueryDict
+
 class ProductCreateSerializer(serializers.Serializer):
-    
-    ProductName = serializers.CharField(max_length=255, help_text="Product name")
-    ProductCode = serializers.CharField(max_length=255)
-    HSNCode     = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    IsFavourite = serializers.BooleanField(required=False, default=False)
-    Active      = serializers.BooleanField(required=False, default=True)
-    variants    = VariantInputSerializer(many=True, required=False)
+    ProductName  = serializers.CharField(max_length=255)
+    ProductCode  = serializers.CharField(max_length=255)
+    HSNCode      = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    IsFavourite  = serializers.BooleanField(required=False, default=False)
+    Active       = serializers.BooleanField(required=False, default=True)
+    variants     = VariantInputSerializer(many=True, required=False)
+    ProductImage = serializers.ImageField(required=False, allow_null=True)
+
+    def to_internal_value(self, data):
+        # Only kicks in for multipart requests, where variants arrives as a JSON string
+        if isinstance(data, QueryDict):
+            data = data.dict()
+            raw_variants = data.get('variants')
+            if isinstance(raw_variants, str):
+                try:
+                    data['variants'] = json.loads(raw_variants)
+                except ValueError:
+                    raise serializers.ValidationError({'variants': 'Must be valid JSON.'})
+        return super().to_internal_value(data)
 
     def validate_ProductCode(self, value):
         if Products.objects.filter(ProductCode=value).exists():
@@ -128,23 +143,18 @@ class ProductCreateSerializer(serializers.Serializer):
         return value
 
     def validate_variants(self, value):
-        
         names = [v['name'].lower() for v in value]
         if len(names) != len(set(names)):
-            raise serializers.ValidationError(
-                "Variant names must be unique within a product."
-            )
+            raise serializers.ValidationError("Variant names must be unique within a product.")
         return value
 
     @db_transaction.atomic
     def create(self, validated_data):
         variants_data = validated_data.pop('variants', [])
+        image = validated_data.pop('ProductImage', None)
         user = self.context['request'].user
 
-        # Auto-generate ProductID
-        last = Products.objects.order_by('-ProductID').values_list(
-            'ProductID', flat=True,
-        ).first()
+        last = Products.objects.order_by('-ProductID').values_list('ProductID', flat=True).first()
         next_id = (last or 0) + 1
 
         product = Products.objects.create(
@@ -156,20 +166,14 @@ class ProductCreateSerializer(serializers.Serializer):
             Active=validated_data.get('Active', True),
             CreatedUser=user,
             TotalStock=Decimal('0'),
+            ProductImage=image,   
         )
 
         for var_data in variants_data:
-            variant = ProductVariant.objects.create(
-                product=product,
-                name=var_data['name'],
-            )
+            variant = ProductVariant.objects.create(product=product, name=var_data['name'])
             for opt_value in var_data['options']:
-                VariantOption.objects.create(
-                    variant=variant,
-                    value=opt_value,
-                )
+                VariantOption.objects.create(variant=variant, value=opt_value)
 
-        
         if variants_data:
             generate_sub_variants(product)
 
@@ -177,7 +181,6 @@ class ProductCreateSerializer(serializers.Serializer):
         return product
 
     def to_representation(self, instance):
-        """Return the full detail view after creation."""
         return ProductDetailSerializer(instance, context=self.context).data
 
 

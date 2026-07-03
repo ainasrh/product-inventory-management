@@ -23,7 +23,7 @@ export const PRODUCT_ENDPOINTS = {
   CREATE: '/products/',
   DETAIL: (id) => `/products/${id}/`,
   UPDATE: (id) => `/products/${id}/`,
-  DELETE: (id) => `/products/${id}/`,       // soft-delete (sets Active=false)
+  DELETE: (id) => `/products/${id}/`,       
 
   // Variants nested under product
   VARIANTS:       (productId) => `/products/${productId}/variants/`,

@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthContext, AuthProvider } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
@@ -9,51 +9,90 @@ import { ProductCreatePage } from './pages/ProductCreatePage';
 import { StockManagementPage } from './pages/StockManagementPage';
 import { StockReportPage } from './pages/StockReportPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { ProductEditPage } from './pages/ProductEditPage';
+import { Navbar } from './components/Navbar';
 import './App.css';
 
-// ── Protected Route Wrapper ────────────────────────────────────────────
-function ProtectedRoute({ children }) {
+// ── Single Wrapper for Auth & Layout ──────────────────────────────────
+function ProtectedLayout() {
   const { token, loading } = useContext(AuthContext);
 
+  // 1. Check authentication first
   if (loading) return <LoadingSpinner />;
   if (!token) return <Navigate to="/login" />;
-  return children;
-}
 
-// ── Layout with Navigation ────────────────────────────────────────────
-function Layout({ children }) {
-  const { logout, user } = useContext(AuthContext);
-
+  // 2. If authenticated, render the layout
+  // <Outlet /> acts as a placeholder where the child routes will be rendered
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-8">
-            <h1 className="text-lg font-bold text-gray-900">Inventory System</h1>
-            <div className="hidden md:flex gap-6 text-sm">
-              <a href="/products" className="text-gray-600 hover:text-gray-900 font-medium">Products</a>
-              <a href="/stock" className="text-gray-600 hover:text-gray-900 font-medium">Stock Mgmt</a>
-              <a href="/stock/report" className="text-gray-600 hover:text-gray-900 font-medium">Reports</a>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {user && <span className="text-sm text-gray-600">Hi, <strong>{user.username}</strong></span>}
-            <button
-              onClick={logout}
-              className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md font-medium transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="flex-1">{children}</main>
+      <Navbar />
+      <main className="flex-1">
+        <Outlet /> 
+      </main>
     </div>
   );
 }
+
+
+// ── Admin-Only Wrapper (nested inside ProtectedLayout's auth check) ──
+function AdminProtectedLayout() {
+  const { token, user, loading } = useContext(AuthContext);
+
+  if (loading) return <LoadingSpinner />;
+  if (!token) return <Navigate to="/login" />;
+
+  if (!user?.is_superuser) {
+    return <AccessDenied />;
+  }
+  
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Navbar />
+      <main className="flex-1">
+        <Outlet /> 
+      </main>
+    </div>
+  );
+}
+// ── Access Denied Message ─────────────────────────────────────────────
+import { Link } from 'react-router-dom';
+
+// ── Access Denied Message ─────────────────────────────────────────────
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-8 max-w-md">
+        <svg
+          className="w-12 h-12 text-red-500 mx-auto mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <h2 className="text-xl font-semibold text-gray-800 mb-2">
+          Access Restricted
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Only admin accounts can access this page. Please contact your
+          administrator if you believe this is a mistake.
+        </p>
+        <Link
+          to="/products"
+          className="inline-block px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+        >
+          Back to Products
+        </Link>
+      </div>
+    </div>
+  );
+}
+  
 
 // ── Routes ────────────────────────────────────────────────────────────
 function AppRoutes() {
@@ -64,47 +103,25 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/products"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ProductListPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/products/new"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ProductCreatePage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/stock"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <StockManagementPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/stock/report"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <StockReportPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+        {/* 
+          Protected Routes Group 
+          Everything inside this <Route> goes through ProtectedLayout
+        */}
+        <Route element={<ProtectedLayout />}>
+          <Route path="/products" element={<ProductListPage />} />
+          
+          
+        </Route>
+          
+          <Route element={<AdminProtectedLayout />}>
+          <Route path="/products/new" element={<ProductCreatePage />} />
+          <Route path="/products/:id/edit" element={<ProductEditPage />} />
+          <Route path="/stock" element={<StockManagementPage />} />
+          <Route path="/stock/report" element={<StockReportPage />} />
+            
+          </Route>
+       
+
 
         {/* Redirects */}
         <Route path="/" element={<Navigate to="/products" />} />

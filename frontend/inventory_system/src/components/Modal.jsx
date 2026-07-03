@@ -1,25 +1,43 @@
-/**
- * Generic modal overlay.
- * Closes on backdrop click or × button.
- */
-export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' }) {
+import { useEffect, useRef } from 'react';
+
+/** Same API as before: isOpen, onClose, title, maxWidth, children */
+export function Modal({ isOpen, onClose, title, maxWidth = 'max-w-lg', children }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKeyDown);
+    dialogRef.current?.focus();
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black bg-opacity-40" onClick={onClose} />
-
-      {/* Panel */}
-      <div className={`relative bg-white rounded-lg shadow-xl w-full ${maxWidth} mx-4 max-h-[90vh] flex flex-col`}>
-        {/* Header */}
-        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 shrink-0">
-          <h2 className="text-base font-semibold text-gray-800">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        tabIndex={-1}
+        className={`w-full ${maxWidth} max-h-[90vh] overflow-y-auto scrollbar-thin bg-surface border border-border rounded-xl shadow-elevated animate-slideUp focus:outline-none`}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-surface/95 backdrop-blur-sm z-10">
+          <h2 id="modal-title" className="font-semibold text-text text-base">{title}</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg p-1.5 transition text-xl font-bold leading-none"
+          >
+            ×
+          </button>
         </div>
-
-        {/* Body */}
-        <div className="px-6 py-4 overflow-y-auto">{children}</div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );

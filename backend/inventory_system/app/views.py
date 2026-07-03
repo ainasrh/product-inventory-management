@@ -205,13 +205,17 @@ class ProductDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Soft-delete: set Active=False
-        instance.Active = False
-        instance.save(update_fields=['Active'])
-        logger.info("API: Soft-deleted product %s", instance.ProductCode)
+
+        product_code = instance.ProductCode
+        product_id = instance.pk
+
+        instance.delete()
+
+        logger.info("API: Deleted product %s", product_code)
+
         return _success_response(
-            {'id': str(instance.pk)},
-            message='Product deactivated successfully',
+            {"id": str(product_id)},
+            message="Product deleted successfully",
         )
 
 

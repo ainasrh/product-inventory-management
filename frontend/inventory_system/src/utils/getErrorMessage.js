@@ -1,15 +1,19 @@
 /**
  * Maps API error responses to user-friendly messages.
  *
- * Backend error shape:
- *   { status: 'error', message: '...', errors: ['Field X: ...', '...'] }
+ * Supports common backend response shapes:
  *
- * HTTP codes we handle explicitly:
- *   400 — validation / bad input
- *   401 — not authenticated
- *   404 — resource not found
- *   409 — conflict (insufficient stock, duplicate code)
- *   500 — server error
+ * Custom API:
+ *   {
+ *     status: 'error',
+ *     message: '...',
+ *     errors: ['Field X: ...']
+ *   }
+ *
+ * DRF / SimpleJWT:
+ *   {
+ *     detail: 'No active account found with the given credentials'
+ *   }
  */
 export function getErrorMessage(err) {
   if (!err.response) {
@@ -18,50 +22,97 @@ export function getErrorMessage(err) {
 
   const { status, data } = err.response;
 
+  // Prefer explicit backend message when available
+  const backendMessage =
+    data?.message ||
+    data?.detail ||
+    data?.error;
+
   switch (status) {
     case 400:
-      // Backend returns { status, message, errors: ['Field X: ...']}
-      if (data?.errors?.length) {
+      if (
+        Array.isArray(data?.errors) &&
+        data.errors.length > 0
+      ) {
         return data.errors.join(' ');
       }
-      return data?.message || 'Invalid request.';
+
+      return backendMessage || 'Invalid request.';
 
     case 401:
-      return 'Session expired. Please log in again.';
+      return (
+        backendMessage ||
+        'Authentication failed. Please check your credentials.'
+      );
+
+    case 403:
+      return (
+        backendMessage ||
+        'You do not have permission to perform this action.'
+      );
 
     case 404:
-      return 'The requested item could not be found.';
+      return (
+        backendMessage ||
+        'The requested item could not be found.'
+      );
 
     case 409:
-      // Insufficient stock comes back as 409
-      return data?.message || 'Conflict — check for duplicate codes or insufficient stock.';
+      return (
+        backendMessage ||
+        'Conflict — check for duplicate codes or insufficient stock.'
+      );
 
     case 500:
-      return 'Something went wrong on the server. Please try again.';
+      return (
+        backendMessage ||
+        'Something went wrong on the server. Please try again.'
+      );
 
     default:
-      return data?.message || 'An unexpected error occurred.';
+      return (
+        backendMessage ||
+        'An unexpected error occurred.'
+      );
   }
 }
 
 /**
- * Extracts field-level errors from a 400 response for inline form display.
- * Backend errors array: ['Field \'ProductCode\': already exists.', ...]
- * We convert them back into { fieldName: 'message' } where possible.
+ * Extracts field-level errors from a 400 response.
+ *
+ * Backend errors array:
+ *   ["Field 'ProductCode': already exists."]
+ *
+ * Converts to:
+ *   {
+ *     ProductCode: 'already exists.'
+ *   }
  */
 export function extractFieldErrors(err) {
-  if (!err.response || err.response.status !== 400) return {};
+  if (
+    !err.response ||
+    err.response.status !== 400
+  ) {
+    return {};
+  }
 
   const errors = err.response.data?.errors;
-  if (!Array.isArray(errors)) return {};
+
+  if (!Array.isArray(errors)) {
+    return {};
+  }
 
   const fieldErrors = {};
+
   errors.forEach((msg) => {
-    // Match pattern: "Field 'FieldName': message"
-    const match = msg.match(/^Field '(\w+)': (.+)$/);
+    const match = msg.match(
+      /^Field '(\w+)': (.+)$/
+    );
+
     if (match) {
       fieldErrors[match[1]] = match[2];
     }
   });
+
   return fieldErrors;
 }
